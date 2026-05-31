@@ -1,0 +1,6 @@
+print("=" * 67)
+print(" Thank you for your time ") 
+print(" 2º14 , M11 , Final project - Python ") 
+print("Made By : Adam Ibrahim ") 
+print(" prof : Alexandre Rodrigues ") 
+print("=" * 67) 

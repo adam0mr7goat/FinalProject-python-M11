@@ -1,0 +1,180 @@
+import json
+import os
+from fpdf import FPDF # to creat a PDF and put the info there
+import smtplib
+from email.mime.text import MIMEText
+
+FILE = "candidates.json" 
+
+def load_candidates(): 
+    if os.path.exists(FILE): # see if the file even exist :) 
+        with open(FILE,"r") as f : 
+            return json.load(f)
+    return [] # return an empty list 
+
+def save_candidates(candidates):
+    with open(FILE, "w") as f:
+        json.dump(candidates, f, indent=4)
+
+def register_candidate(): 
+    name = input("Full name: ")
+    age = int(input("Age: "))
+    email = input("Your email: ")
+    education = input("Education level (basic/secondary): ")
+    course = input("Desired course: ")
+    mathGrade = float(input("Math grade: "))
+    ptGrade = float(input("Portuguese grade: "))
+    failures = int(input("Number of failures in 9th grade: "))
+
+    candidate = {
+        "name": name,
+        "age": age,
+        "email": email,
+        "education": education,
+        "course": course,
+        "mathGrade": mathGrade,
+        "ptGrade": ptGrade,
+        "failures": failures,
+        "status": ""
+    }
+    candidate = evaluate_candidate(candidate)
+    # here we evaluate the candidate after we collect all the info and put them in the dictionary
+    # so the function can check their age and education level
+    # and set their status to accepted or rejected before saving to the file
+
+    candidates = load_candidates()
+    candidates.append(candidate)
+    save_candidates(candidates)
+    generate_pdf(candidate)
+    send_email(candidate)
+    print("Candidate registered successfully!")
+
+# ---------------------------------------
+def evaluate_candidate(candidate):
+    if 15 <= candidate["age"] <= 18 and candidate["education"] == "basic":
+        candidate["status"] = "Accepted"
+    else:
+        candidate["status"] = "Rejected"
+    return candidate
+
+# ---------------------------------------
+# generates a PDF receipt for the candidate
+def generate_pdf(candidate):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(200, 10, txt="COURSE REGISTRATION RECEIPT", ln=True, align="C")
+    pdf.ln(10)
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="Name: " + candidate["name"], ln=True)
+    pdf.cell(200, 10, txt="Age: " + str(candidate["age"]), ln=True)
+    pdf.cell(200, 10, txt="Email: " + candidate["email"], ln=True)
+    pdf.cell(200, 10, txt="Course: " + candidate["course"], ln=True)
+    pdf.cell(200, 10, txt="Status: " + candidate["status"], ln=True)
+    
+    filename = candidate["name"] + "_receipt.pdf"
+    pdf.output(filename)
+    print("PDF generated: " + filename)
+
+# ---------------------------------------
+# sends an email to the candidate with their status
+def send_email(candidate):
+    sender = "candidaturacursos@gmail.com"
+    password = "szqnknemhrfweani"
+    
+    subject = "Course Registration - " + candidate["status"]
+    body = "Hello " + candidate["name"] + ",\n\nYour registration status is: " + candidate["status"] + "\n\nCourse: " + candidate["course"] + "\n\nThank you!"
+    
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = candidate["email"]
+    
+    try:
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.login(sender, password)
+        server.sendmail(sender, candidate["email"], msg.as_string())
+        server.quit()
+        print("Email sent to " + candidate["email"])
+    except:
+        print("Failed to send email.")
+
+# ---------------------------------------
+# loads all candidates from the file and displays each one
+def list_candidates():
+    candidates = load_candidates()
+    if len(candidates) == 0: # if the list is empty print ... if not show the list :)
+        print("No candidates registered.")
+    else:
+        for c in candidates:
+            print("Name: " + c["name"])
+            print("Age: " + str(c["age"]))
+            print("Status: " + c["status"])
+# ---------------------------------------
+def search_candidate():
+    search = input("Enter name to search: ")
+    candidates = load_candidates()
+    found = False
+    for c in candidates:
+        if c["name"].lower() == search.lower(): # so this lower do , it change it to a lower case before it convert it make it , like if i ask for a name and the if say if name = Adam --- but you wirte ADAM , it will still undersand it 
+            print("Name: " + c["name"])
+            print("Age: " + str(c["age"]))
+            print("Email: " + c["email"])
+            print("Status: " + c["status"])
+            found = True
+    if not found:
+        print("Candidate not found.")
+
+# ---------------------------------------
+# export accepted and rejected candidates to separate files
+def export_candidates():
+    candidates = load_candidates()
+    
+    accepted = []
+    rejected = []
+    
+    for c in candidates:
+        if c["status"] == "Accepted":
+            accepted.append(c)
+        else:
+            rejected.append(c)
+    
+    with open("accepted.json", "w") as f:
+        json.dump(accepted, f, indent=4)
+    
+    with open("rejected.json", "w") as f:
+        json.dump(rejected, f, indent=4)
+    
+    print("Exported successfully!")
+    print("Accepted candidates: " + str(len(accepted)))
+    print("Rejected candidates: " + str(len(rejected)))
+
+# ---------------------------------------
+# and now the main menu
+
+while True: # keeps running until the user says exit
+    print("=" * 40) # learned this from YT its so cool
+    print("  COURSE REGISTRATION SYSTEM")
+    print("=" * 40)
+    print("1 - Register a new candidate")
+    print("2 - List all candidates")
+    print("3 - Search candidate")
+    print("4 - Export accepted/rejected list")
+    print("5 - Exit")
+    option = int(input("Choose an option (1-5): "))
+
+    if option == 1:
+        register_candidate()
+    elif option == 2:
+        list_candidates()
+    elif option == 3:
+        search_candidate()
+    elif option == 4: 
+        export_candidates()
+    elif option == 5:
+        print("Goodbye!")
+        break
+    else:
+        print("Invalid option, try again.")
